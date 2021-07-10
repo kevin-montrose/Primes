@@ -42,14 +42,14 @@ namespace PrimeSieveCS
             public ulong countPrimes()
             {
                 var sieveSize = this.sieveSize;
-                var rawbits = this.rawbits;
+                ref var rawbits = ref this.rawbits[0];
 
                 // hoist null check
-                _ = getrawbits(rawbits, 0);
+                _ = getrawbits(ref rawbits, 0);
 
                 ulong count = (sieveSize >= 2) ? 1UL : 0UL;
                 for (ulong i = 3; i < sieveSize; i+=2)
-                    if (GetBit(rawbits, i))
+                    if (GetBit(ref rawbits, i))
                         count++;
                 return count;
             }
@@ -60,19 +60,19 @@ namespace PrimeSieveCS
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static bool GetBit(byte[] rawbits, ulong index)
+            private static bool GetBit(ref byte rawbits, ulong index)
             {
                 Debug.Assert((index % 2) != 0);
                 index /= 2;
-                return (getrawbits(rawbits, index / 8U) & (1u << (int)(index % 8))) != 0;
+                return (getrawbits(ref rawbits, index / 8U) & (1u << (int)(index % 8))) != 0;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static void ClearBit(byte[] rawbits, ulong index)
+            private static void ClearBit(ref byte rawbits, ulong index)
             {
                 Debug.Assert((index % 2) != 0);
                 index /= 2;
-                getrawbits(rawbits, index / 8) &= (byte)~(1u << (int)(index % 8));
+                getrawbits(ref rawbits, index / 8) &= (byte)~(1u << (int)(index % 8));
             }
 
             // primeSieve
@@ -83,10 +83,10 @@ namespace PrimeSieveCS
             public void runSieve()
             {
                 var sieveSize = this.sieveSize;
-                var rawbits = this.rawbits;
+                ref var rawbits = ref this.rawbits[0];
 
                 // hoist null check
-                _ = getrawbits(rawbits, 0);
+                _ = getrawbits(ref rawbits, 0);
 
                 ulong factor = 3;
                 ulong q = (ulong)Math.Sqrt(sieveSize);
@@ -95,7 +95,7 @@ namespace PrimeSieveCS
                 {
                     for (ulong num = factor; num < sieveSize; num += 2)
                     {
-                        if (GetBit(rawbits, num))
+                        if (GetBit(ref rawbits, num))
                         {
                             factor = num;
                             break;
@@ -106,7 +106,7 @@ namespace PrimeSieveCS
                     // We can then step by factor * 2 because every second one is going to be even by definition
 
                     for (ulong num = factor * factor; num < sieveSize; num += factor * 2)
-                        ClearBit(rawbits, num);
+                        ClearBit(ref rawbits, num);
 
                     factor += 2;
                 }
@@ -115,10 +115,10 @@ namespace PrimeSieveCS
             public void printResults(bool showResults, double duration, ulong passes)
             {
                 var sieveSize = this.sieveSize;
-                var rawbits = this.rawbits;
+                ref var rawbits = ref this.rawbits[0];
 
                 // hoist null check
-                _ = getrawbits(rawbits, 0);
+                _ = getrawbits(ref rawbits, 0);
 
                 if (showResults)
                     Console.Write("2, ");
@@ -126,7 +126,7 @@ namespace PrimeSieveCS
                 ulong count = (sieveSize >= 2) ? 1UL : 0UL;
                 for (ulong num = 3; num <= sieveSize; num += 2)
                 {
-                    if (GetBit(rawbits, num))
+                    if (GetBit(ref rawbits, num))
                     {
                         if (showResults)
                             Console.Write(num + ", ");
@@ -143,9 +143,9 @@ namespace PrimeSieveCS
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static ref byte getrawbits(byte[] rawbits, ulong index)
+            private static ref byte getrawbits(ref byte rawbits, ulong index)
             {
-                return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(rawbits), (nint)index);
+                return ref Unsafe.Add(ref rawbits, (nint)index);
             }
         }
 
