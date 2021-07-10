@@ -48,7 +48,7 @@ namespace PrimeSieveCS
                 _ = getrawbits(ref rawbits, 0);
 
                 ulong count = (sieveSize >= 2) ? 1UL : 0UL;
-                for (ulong i = 3; i < sieveSize; i+=2)
+                for (ulong i = 3; i < sieveSize; i += 2)
                     if (GetBit(ref rawbits, i))
                         count++;
                 return count;
@@ -68,28 +68,31 @@ namespace PrimeSieveCS
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static void ClearBit(ref byte rawbits, ulong index)
+            private static ulong FindNextOddSetBit(ref byte rawbits, ulong startIndex, ulong limit)
             {
-                Debug.Assert((index % 2) != 0);
-                index /= 2;
-                getrawbits(ref rawbits, index / 8) &= (byte)~(1u << (int)(index % 8));
+                const int N = 2;
+
+                for (ulong num = startIndex; num < limit; num += N)
+                {
+                    ulong scaledIndex = num / 2;
+                    ulong byteIndex = scaledIndex / 8U;
+                    int bitIndex = (int)(scaledIndex % 8);
+                    byte bitMask = (byte)(1u << bitIndex);
+
+                    ref byte pointer = ref Unsafe.Add(ref rawbits, (nint)byteIndex);
+
+                    if ((pointer & bitMask) != 0)
+                    {
+                        return num;
+                    }
+                }
+
+                return startIndex;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static void ClearEveryNthBit(ref byte rawbits, ulong startIndex, ulong limit, ulong n)
             {
-                // bitIndex_0 = num_0 / 2;
-                // bitIndex_1 = (num_0 + num_0) / 2;
-
-                // byteIndex_0 = num_0 / (2 * 8)
-                // byteIndex_1 = (num_0 + num_0) / (2 * 8)
-
-                // bitOffset_0 = (num_0 / 2) % 8
-                // bitOffset_0 = [(num_0 + num_0) / 2] % 8
-
-                // mask_0 = 2 ^ [(num_0 / 2) % 8]
-                // mask_1 = 2 ^ [([num_0 + num_0] / 2 ) % 8]
-
                 ulong bitStep = n / 2;
                 ulong bitIndex = startIndex / 2;
 
@@ -100,7 +103,6 @@ namespace PrimeSieveCS
                     byte mask = (byte)~(1u << (int)bitOffset);
 
                     ref byte pointer = ref Unsafe.Add(ref rawbits, (nint)byteIndex);
-                    
                     pointer &= mask;
 
                     bitIndex += bitStep;
@@ -125,14 +127,7 @@ namespace PrimeSieveCS
 
                 while (factor <= q)
                 {
-                    for (ulong num = factor; num < sieveSize; num += 2)
-                    {
-                        if (GetBit(ref rawbits, num))
-                        {
-                            factor = num;
-                            break;
-                        }
-                    }
+                    factor = FindNextOddSetBit(ref rawbits, factor, sieveSize);
 
                     // If marking factor 3, you wouldn't mark 6 (it's a mult of 2) so start with the 3rd instance of this factor's multiple.
                     // We can then step by factor * 2 because every second one is going to be even by definition
