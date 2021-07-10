@@ -75,6 +75,38 @@ namespace PrimeSieveCS
                 getrawbits(ref rawbits, index / 8) &= (byte)~(1u << (int)(index % 8));
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static void ClearEveryNthBit(ref byte rawbits, ulong startIndex, ulong limit, ulong n)
+            {
+                // bitIndex_0 = num_0 / 2;
+                // bitIndex_1 = (num_0 + num_0) / 2;
+
+                // byteIndex_0 = num_0 / (2 * 8)
+                // byteIndex_1 = (num_0 + num_0) / (2 * 8)
+
+                // bitOffset_0 = (num_0 / 2) % 8
+                // bitOffset_0 = [(num_0 + num_0) / 2] % 8
+
+                // mask_0 = 2 ^ [(num_0 / 2) % 8]
+                // mask_1 = 2 ^ [([num_0 + num_0] / 2 ) % 8]
+
+                ulong bitStep = n / 2;
+                ulong bitIndex = startIndex / 2;
+
+                for (ulong num = startIndex; num < limit; num += n)
+                {
+                    ulong byteIndex = bitIndex / 8;
+                    ulong bitOffset = bitIndex % 8;
+                    byte mask = (byte)~(1u << (int)bitOffset);
+
+                    ref byte pointer = ref Unsafe.Add(ref rawbits, (nint)byteIndex);
+                    
+                    pointer &= mask;
+
+                    bitIndex += bitStep;
+                }
+            }
+
             // primeSieve
             // 
             // Calculate the primes up to the specified limit
@@ -104,9 +136,7 @@ namespace PrimeSieveCS
 
                     // If marking factor 3, you wouldn't mark 6 (it's a mult of 2) so start with the 3rd instance of this factor's multiple.
                     // We can then step by factor * 2 because every second one is going to be even by definition
-
-                    for (ulong num = factor * factor; num < sieveSize; num += factor * 2)
-                        ClearBit(ref rawbits, num);
+                    ClearEveryNthBit(ref rawbits, factor * factor, sieveSize, factor * 2);
 
                     factor += 2;
                 }
